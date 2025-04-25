@@ -16,6 +16,7 @@ local stockPile = nil
 local wastePile = nil
 
 function love.load()
+    love.window.setTitle("Solitaire")
     love.graphics.setBackgroundColor(0, 0.5, 0)
 
     cards = Deck.createDeck()
@@ -55,5 +56,24 @@ function love.draw()
 
     stockPile:draw()
     wastePile:draw()
+end
+
+function love.mousepressed(x, y, button)
+    if button == 1 then -- left click
+        -- check if clicked on stock pile
+        if x >= stockPile.x and x <= stockPile.x + 71 and
+           y >= stockPile.y and y <= stockPile.y + 96 then
+
+            -- move up to 3 cards from stock to waste pile
+            for i = 1, 3 do
+                local card = table.remove(stockPile.cards)
+                if card then
+                    card.faceUp = true
+                    -- add to waste pile
+                    table.insert(wastePile.cards, 1, card)
+                end
+            end
+        end
+    end
 end
 
