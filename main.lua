@@ -6,6 +6,7 @@
 local Deck = require("deck")
 local Pile = require("pile")
 local Card = require("card")
+local grabber = require("grabber")
 
 local cards = {}
 local tableauPiles = {}
@@ -77,7 +78,6 @@ function love.draw()
     local offsetX = deckPile.x
     local offsetY = deckPile.y + 100
     for i, card in ipairs(drawnCards) do
-      --overlap (get rid of later?)
         card.x = offsetX + (i - 1) * 15
         card.y = offsetY
         card:draw()
@@ -91,22 +91,12 @@ function love.draw()
     end
 end
 
-
 function love.mousepressed(x, y, button)
-  --draw card logic
     if button == 1 then
-        if x >= deckPile.x and x <= deckPile.x + 71 and y >= deckPile.y and y <= deckPile.y + 96 then
-            -- check if there are cards left in the deck
-            if #deckPile.cards > 0 then
-                for i = 1, 3 do
-                    local card = table.remove(deckPile.cards)
-                    card.faceUp = true
-                    table.insert(drawnCards, card)
-                end
-            end
-        end
+        -- draw card logic now in grabber
+        grabber.tryDrawFromDeck(x, y, deckPile, drawnCards)
 
-        --if a card in tableau piles is clicked
+        -- if a card in tableau piles is clicked
         for _, pile in ipairs(tableauPiles) do
             for i, card in ipairs(pile.cards) do
                 if card.faceUp and x >= card.x and x <= card.x + 71 and y >= card.y and y <= card.y + 96 then
@@ -118,7 +108,7 @@ function love.mousepressed(x, y, button)
             end
         end
 
-        --if a drawn card is clicked
+        -- if a drawn card is clicked
         for i, card in ipairs(drawnCards) do
             if card.faceUp and x >= card.x and x <= card.x + 71 and y >= card.y and y <= card.y + 96 then
                 draggedCard = card
@@ -135,7 +125,7 @@ function love.mousereleased(x, y, button)
         if draggedCard then
             local cardDropped = false
 
-            --if dragged card is dropped on pile
+            -- if dragged card is dropped on pile
             if x >= wastePile.x and x <= wastePile.x + 71 and y >= wastePile.y and y <= wastePile.y + 96 then
                 table.insert(wastePile.cards, draggedCard)
                 cardDropped = true
@@ -143,7 +133,6 @@ function love.mousereleased(x, y, button)
 
             for _, pile in ipairs(tableauPiles) do
                 if x >= pile.x and x <= pile.x + 71 and y >= pile.y and y <= pile.y + 96 then
-                    -- Move the card to the tableau pile
                     table.insert(pile.cards, draggedCard)
                     cardDropped = true
                     break
@@ -163,4 +152,3 @@ end
 function love.mousemoved(x, y, dx, dy)
 
 end
-
