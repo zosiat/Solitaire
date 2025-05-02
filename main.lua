@@ -6,7 +6,8 @@
 local Deck = require("deck")
 local Pile = require("pile")
 local Card = require("card")
-local grabber = require("grabber")
+local Grabber = require("grabber")
+local grabber = Grabber:new()
 
 local cards = {}
 local tableauPiles = {}
@@ -16,6 +17,7 @@ local wastePile = nil
 local drawnCards = {}
 local draggedCard = nil
 local mouseOffset = { x = 0, y = 0 }
+local draggedCardOrigin = nil
 
 function love.load()
     love.window.setTitle("Solitaire")
@@ -94,43 +96,44 @@ end
 function love.mousepressed(x, y, button)
     if button == 1 then
         -- draw card logic now in grabber
-        grabber.tryDrawFromDeck(x, y, deckPile, drawnCards)
+        grabber:tryDrawFromDeck(x, y, deckPile, drawnCards)
 
-        -- if a card in tableau piles is clicked
-        for _, pile in ipairs(tableauPiles) do
-            for i, card in ipairs(pile.cards) do
-                if card.faceUp and x >= card.x and x <= card.x + 71 and y >= card.y and y <= card.y + 96 then
-                    draggedCard = card
-                    mouseOffset.x = x - card.x
-                    mouseOffset.y = y - card.y
-                    break
-                end
-            end
-        end
-
-        -- if a drawn card is clicked
-        for i, card in ipairs(drawnCards) do
+    -- tableau check
+    for _, pile in ipairs(tableauPiles) do
+        for i, card in ipairs(pile.cards) do
             if card.faceUp and x >= card.x and x <= card.x + 71 and y >= card.y and y <= card.y + 96 then
                 draggedCard = card
+                draggedCardOrigin = pile -- ✅ store where the card came from
                 mouseOffset.x = x - card.x
                 mouseOffset.y = y - card.y
                 break
             end
         end
     end
+    -- drawnCards check
+    for i, card in ipairs(drawnCards) do
+        if card.faceUp and x >= card.x and x <= card.x + 71 and y >= card.y and y <= card.y + 96 then
+            draggedCard = card
+            draggedCardOrigin = "drawn"
+            mouseOffset.x = x - card.x
+            mouseOffset.y = y - card.y
+            break
+        end
+    end
 end
-
+end
 function love.mousereleased(x, y, button)
     if button == 1 then
         if draggedCard then
             local cardDropped = false
 
-            -- if dragged card is dropped on pile
+            -- drop on waste pile (optional, remove if you don't want this)
             if x >= wastePile.x and x <= wastePile.x + 71 and y >= wastePile.y and y <= wastePile.y + 96 then
                 table.insert(wastePile.cards, draggedCard)
                 cardDropped = true
             end
 
+            -- drop on tableau piles
             for _, pile in ipairs(tableauPiles) do
                 if x >= pile.x and x <= pile.x + 71 and y >= pile.y and y <= pile.y + 96 then
                     table.insert(pile.cards, draggedCard)
@@ -139,16 +142,51 @@ function love.mousereleased(x, y, button)
                 end
             end
 
+            -- drop on foundation piles
+            for _, pile in ipairs(foundationPiles) do
+                if x >= pile.x and x <= pile.x + 71 and y >= pile.y and y <= pile.y + 96 then
+                    table.insert(pile.cards, draggedCard)
+                    cardDropped = true
+                    break
+                end
+            end
+
+            -- safely remove draggedCard from its origin
             if cardDropped then
+                if type(draggedCardOrigin) == "table" then
+                    -- it's a pile
+                    for i = #draggedCardOrigin.cards, 1, -1 do
+                        if draggedCardOrigin.cards[i] == draggedCard then
+                            table.remove(draggedCardOrigin.cards, i)
+                            break
+                        end
+                    end
+                elseif draggedCardOrigin == "drawn" then
+                    -- it's from drawnCards
+                    for i = #drawnCards, 1, -1 do
+                        if drawnCards[i] == draggedCard then
+                            table.remove(drawnCards, i)
+                            break
+                        end
+                    end
+                end
+
+                -- set final position
                 draggedCard.x = x
                 draggedCard.y = y
             end
 
+            -- clear drag state
             draggedCard = nil
+            draggedCardOrigin = nil
         end
     end
 end
 
 function love.mousemoved(x, y, dx, dy)
 
+end
+
+function love.update(dt)
+      grabber:update()
 end

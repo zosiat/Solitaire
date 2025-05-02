@@ -1,10 +1,46 @@
--- grabber.lua
-local grabber = {}
+-- grabber.lua 
 
--- for debugging
-print("Loaded grabber module")
+Grabber = {}
+Grabber.__index = Grabber
 
-function grabber.tryDrawFromDeck(x, y, deckPile, drawnCards)
+function Grabber:new()
+    local self = setmetatable({}, Grabber)
+    self.heldObject = nil
+    self.grabX = nil
+    self.grabY = nil
+    return self
+end
+
+function Grabber:update()
+    local x, y = love.mouse.getX(), love.mouse.getY()
+
+    if love.mouse.isDown(1) and not self.grabX then
+        self:grab(x, y)
+    end
+
+    if not love.mouse.isDown(1) and self.grabX then
+        self:release(x, y)
+    end
+end
+
+function Grabber:grab(x, y)
+    self.grabX = x
+    self.grabY = y
+    print("GRAB at", x, y)
+end
+
+function Grabber:release(x, y)
+    print("RELEASE at", x, y)
+    -- If needed, add logic here to revert position
+    if self.heldObject then
+        self.heldObject.state = 0
+        self.heldObject = nil
+    end
+    self.grabX = nil
+    self.grabY = nil
+end
+
+function Grabber:tryDrawFromDeck(x, y, deckPile, drawnCards)
     if x >= deckPile.x and x <= deckPile.x + 71 and y >= deckPile.y and y <= deckPile.y + 96 then
         if #deckPile.cards > 0 then
             for i = 1, 3 do
@@ -19,21 +55,17 @@ function grabber.tryDrawFromDeck(x, y, deckPile, drawnCards)
     return false
 end
 
-function grabber.handleDropOnTableau(x, y, draggedCard, tableauPiles)
+function Grabber:handleDropOnTableau(x, y, draggedCard, tableauPiles)
     for _, pile in ipairs(tableauPiles) do
         if x >= pile.x and x <= pile.x + 71 and y >= pile.y and y <= pile.y + 96 then
-            -- find the original pile containing the dragged card
             for _, originPile in ipairs(tableauPiles) do
                 for i, card in ipairs(originPile.cards) do
                     if card == draggedCard then
                         table.remove(originPile.cards, i)
-
-                        -- flip new top card face up if it's face down
                         local topCard = originPile.cards[#originPile.cards]
                         if topCard and not topCard.faceUp then
                             topCard.faceUp = true
                         end
-
                         break
                     end
                 end
@@ -46,4 +78,20 @@ function grabber.handleDropOnTableau(x, y, draggedCard, tableauPiles)
     return false
 end
 
-return grabber
+function Grabber:handleDropOnWaste(x, y, draggedCard, wastePile, drawnCards)
+    if x >= wastePile.x and x <= wastePile.x + 71 and y >= wastePile.y and y <= wastePile.y + 96 then
+        -- remove from drawn cards
+        for i, card in ipairs(drawnCards) do
+            if card == draggedCard then
+                table.remove(drawnCards, i)
+                break
+            end
+        end
+        -- add to waste pile
+        table.insert(wastePile.cards, draggedCard)
+        return true
+    end
+    return false
+end
+
+return Grabber
