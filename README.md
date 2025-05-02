@@ -20,7 +20,7 @@ A simple Solitaire game made using Lua and the LÖVE2D framework.
 ## Peer Feedback
 
 - **Sean Massa**  
-  *Feedback:* Suggested refactoring `love.mousepressed` and `love.mousereleased` functions into smaller, focused helper functions (e.g. `handleClickDeck`, `handleDropOnPile`) to improve clarity and maintainability. Also suggested replacing hardcoded values with named constants and organizing gloabl variables intoa  central gameState table. Also mentioned creating `grabber.lua` module to handle card logic would streamline `main.lua`.
+  *Feedback:* Suggested refactoring `love.mousepressed` and `love.mousereleased` functions into smaller, focused helper functions (e.g. `handleClickDeck`, `handleDropOnPile`) to improve clarity and maintainability. Also suggested replacing hardcoded values with named constants and organizing gloabl variables into a central gameState table. Also mentioned creating `grabber.lua` module to handle card logic would streamline `main.lua`.
   *Response:* Implemented a `Dragger` file to clean up my main file. Added additional comments to make my code mmore readable. Currently working on transferring more logic from main to dragger.
 ---
 

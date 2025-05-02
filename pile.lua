@@ -33,13 +33,6 @@ function Pile:addCard(card)
 end
 
 function Pile:draw()
-    if #self.cards == 0 then
-        love.graphics.setColor(0.2, 0.2, 0.2)
-        love.graphics.rectangle("line", self.x, self.y, 71, 96)
-        love.graphics.setColor(1, 1, 1)
-        return
-    end
-
     for i, card in ipairs(self.cards) do
         if self.type == "waste" then
             card.x = self.x + (i - 1) * 15

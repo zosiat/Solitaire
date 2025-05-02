@@ -21,6 +21,12 @@ function Card:new(suit, rank, faceUp)
     local imagePath = "assets/card_" .. suit .. "_" .. rank .. ".png"
     this.image = love.graphics.newImage(imagePath)
     this.backImage = love.graphics.newImage("assets/card_back.png")
+    
+    -- loading placeholder cards for the suit piles
+    this.diamondsImage = love.graphics.newImage("assets/card_diamonds.png")
+    this.heartsImage = love.graphics.newImage("assets/card_hearts.png")
+    this.spadesImage = love.graphics.newImage("assets/card_spades.png")
+    this.clubsImage = love.graphics.newImage("assets/card_clubs.png")
 
     setmetatable(this, Card)
     return this
