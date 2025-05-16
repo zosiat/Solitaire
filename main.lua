@@ -132,11 +132,14 @@ function love.draw()
         card:draw()
     end
 
-    -- draw the dragged card
-    if draggedCard then
-        draggedCard.x = love.mouse.getX() - mouseOffset.x
-        draggedCard.y = love.mouse.getY() - mouseOffset.y
-        draggedCard:draw()
+    -- draw the dragged stack
+    if draggedStack then
+        local mx, my = love.mouse.getX(), love.mouse.getY()
+        for i, card in ipairs(draggedStack) do
+            card.x = mx - mouseOffset.x
+            card.y = my - mouseOffset.y + (i - 1) * 30 -- vertical offset between cards
+            card:draw()
+        end
     end
 
     -- draw reset button
@@ -146,100 +149,131 @@ function love.draw()
     love.graphics.print("Reset", resetButton.x + 25, resetButton.y + 12)
 end
 
+
 function love.mousepressed(x, y, button)
     if button == 1 then
         -- draw card logic now in grabber
         grabber:tryDrawFromDeck(x, y, deckPile, drawnCards)
 
-        -- tableau check
+        -- reset draggedStack
+        draggedStack = nil
+        draggedStackOrigin = nil
+        mouseOffset.x = 0
+        mouseOffset.y = 0
+
+        -- tableau check for stack drag
         for _, pile in ipairs(tableauPiles) do
             for i, card in ipairs(pile.cards) do
                 if card.faceUp and x >= card.x and x <= card.x + CARD_WIDTH and y >= card.y and y <= card.y + CARD_HEIGHT then
-                    draggedCard = card
-                    draggedCardOrigin = pile -- store where the card came from
+                    -- drag card and all cards above it in the pile
+                    draggedStack = {}
+                    for j = i, #pile.cards do
+                        table.insert(draggedStack, pile.cards[j])
+                    end
+                    draggedStackOrigin = pile
+                    -- calculate mouse offset relative to the first dragged card
+                    mouseOffset.x = x - card.x
+                    mouseOffset.y = y - card.y
+                    break
+                end
+            end
+            if draggedStack then break end
+        end
+
+        -- drawnCards single card drag (no stack)
+        if not draggedStack then
+            for i, card in ipairs(drawnCards) do
+                if card.faceUp and x >= card.x and x <= card.x + CARD_WIDTH and y >= card.y and y <= card.y + CARD_HEIGHT then
+                    draggedStack = {card}
+                    draggedStackOrigin = "drawn"
                     mouseOffset.x = x - card.x
                     mouseOffset.y = y - card.y
                     break
                 end
             end
         end
-        
-        for i, card in ipairs(drawnCards) do
-            if card.faceUp and x >= card.x and x <= card.x + CARD_WIDTH and y >= card.y and y <= card.y + CARD_HEIGHT then
-                draggedCard = card
-                draggedCardOrigin = "drawn"
-                mouseOffset.x = x - card.x
-                mouseOffset.y = y - card.y
-                break
-            end
-        end
     end
-  -- reset button logic
-  if x >= resetButton.x and x <= resetButton.x + resetButton.width and
-     y >= resetButton.y and y <= resetButton.y + resetButton.height then
-      resetGame()
-  end
 
-
+    -- reset button logic
+    if x >= resetButton.x and x <= resetButton.x + resetButton.width and
+       y >= resetButton.y and y <= resetButton.y + resetButton.height then
+        resetGame()
+    end
 end
 
 function love.mousereleased(x, y, button)
     if button == 1 then
-        if draggedCard then
-            local cardDropped = false
+        if draggedStack then
+            local stackDropped = false
 
             -- drop on waste pile (optional, remove if you don't want this)
             if x >= wastePile.x and x <= wastePile.x + CARD_WIDTH and y >= wastePile.y and y <= wastePile.y + CARD_HEIGHT then
-                table.insert(wastePile.cards, draggedCard)
-                cardDropped = true
+                -- usually you can't drop stacks on waste, so maybe skip this?
+                -- just handling single card:
+                if #draggedStack == 1 then
+                    table.insert(wastePile.cards, draggedStack[1])
+                    stackDropped = true
+                end
             end
 
             -- drop on tableau piles
-            for _, pile in ipairs(tableauPiles) do
-                if x >= pile.x and x <= pile.x + CARD_WIDTH and y >= pile.y and y <= pile.y + CARD_HEIGHT then
-                    table.insert(pile.cards, draggedCard)
-                    cardDropped = true
-                    break
+            if not stackDropped then
+                for _, pile in ipairs(tableauPiles) do
+                    if x >= pile.x and x <= pile.x + CARD_WIDTH and y >= pile.y and y <= pile.y + CARD_HEIGHT then
+                        -- insert entire stack into the pile
+                        for _, card in ipairs(draggedStack) do
+                            table.insert(pile.cards, card)
+                        end
+                        stackDropped = true
+                        break
+                    end
                 end
             end
 
-            -- drop on foundation piles
-            for _, pile in ipairs(foundationPiles) do
-                if x >= pile.x and x <= pile.x + CARD_WIDTH and y >= pile.y and y <= pile.y + CARD_HEIGHT then
-                    table.insert(pile.cards, draggedCard)
-                    cardDropped = true
-                    break
+            -- drop on foundation piles (only allow single card drops usually)
+            if not stackDropped and #draggedStack == 1 then
+                for _, pile in ipairs(foundationPiles) do
+                    if x >= pile.x and x <= pile.x + CARD_WIDTH and y >= pile.y and y <= pile.y + CARD_HEIGHT then
+                        table.insert(pile.cards, draggedStack[1])
+                        stackDropped = true
+                        break
+                    end
                 end
             end
 
-            -- safely remove draggedCard from its origin
-            if cardDropped then
-                if type(draggedCardOrigin) == "table" then
-                    -- it's a pile
-                    for i = #draggedCardOrigin.cards, 1, -1 do
-                        if draggedCardOrigin.cards[i] == draggedCard then
-                            table.remove(draggedCardOrigin.cards, i)
-                            break
+            -- remove dragged cards from origin pile
+            if stackDropped then
+                if type(draggedStackOrigin) == "table" then
+                    -- remove all dragged cards from origin pile
+                    for _, card in ipairs(draggedStack) do
+                        for i = #draggedStackOrigin.cards, 1, -1 do
+                            if draggedStackOrigin.cards[i] == card then
+                                table.remove(draggedStackOrigin.cards, i)
+                                break
+                            end
                         end
                     end
-                elseif draggedCardOrigin == "drawn" then
-                    -- it's from drawnCards
-                    for i = #drawnCards, 1, -1 do
-                        if drawnCards[i] == draggedCard then
-                            table.remove(drawnCards, i)
-                            break
+                elseif draggedStackOrigin == "drawn" then
+                    for _, card in ipairs(draggedStack) do
+                        for i = #drawnCards, 1, -1 do
+                            if drawnCards[i] == card then
+                                table.remove(drawnCards, i)
+                                break
+                            end
                         end
                     end
                 end
 
-                -- set final position
-                draggedCard.x = x
-                draggedCard.y = y
+                -- set final position of dragged cards (optional, you might want to update positions in pile:draw())
+                for i, card in ipairs(draggedStack) do
+                    card.x = x
+                    card.y = y + (i - 1) * 30
+                end
             end
 
             -- clear drag state
-            draggedCard = nil
-            draggedCardOrigin = nil
+            draggedStack = nil
+            draggedStackOrigin = nil
         end
     end
 end
@@ -249,7 +283,7 @@ function love.mousemoved(x, y, dx, dy)
 end
 
 function love.update(dt)
-    grabber:update()
+    grabber:update(tableauPiles)
 end
 
 function resetGame()

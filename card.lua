@@ -33,6 +33,8 @@ function Card:new(suit, rank, faceUp)
 end
 
 function Card:draw()
+    if self.state == 1 then return end  -- don't draw if card is being held
+
     love.graphics.setColor(1, 1, 1)
     if self.faceUp then
         love.graphics.draw(self.image, self.x, self.y, 0, 1, 1)

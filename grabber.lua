@@ -78,6 +78,36 @@ function Grabber:handleDropOnTableau(x, y, draggedCard, tableauPiles)
     return false
 end
 
+function Grabber:grabFromTableau(x, y, tableauPiles)
+    for _, pile in ipairs(tableauPiles) do
+        -- iterate cards from top (end) down to bottom (1)
+        for i = #pile.cards, 1, -1 do
+            local card = pile.cards[i]
+            -- check if mouse is inside this card and card is face-up
+            if card.faceUp and x >= card.x and x <= card.x + 71 and y >= card.y and y <= card.y + 96 then
+                -- create held stack with this card and all cards above it
+                self.heldStack = {}
+                for j = i, #pile.cards do
+                    local c = pile.cards[j]
+                    c.state = 1 -- mark as grabbed
+                    table.insert(self.heldStack, c)
+                end
+                -- remove grabbed cards from original pile
+                for j = #pile.cards, i, -1 do
+                    table.remove(pile.cards, j)
+                end
+
+                -- store initial grab position for drag offset if needed
+                self.grabX = x
+                self.grabY = y
+
+                return -- done grabbing
+            end
+        end
+    end
+end
+
+
 function Grabber:handleDropOnWaste(x, y, draggedCard, wastePile, drawnCards)
     if x >= wastePile.x and x <= wastePile.x + 71 and y >= wastePile.y and y <= wastePile.y + 96 then
         -- remove from drawn cards
